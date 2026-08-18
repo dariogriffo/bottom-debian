@@ -1,0 +1,19 @@
+Source: btm
+Section: utils
+Priority: optional
+Maintainer: Dario Griffo <dariogriffo@gmail.com>
+Homepage: https://github.com/ClementTsang/bottom
+Package: btm
+Version: bottom_VERSION-BUILD_VERSION~DIST
+Architecture: SUPPORTED_ARCHITECTURES
+Depends: DEPENDS
+Provides: bottom
+Conflicts: bottom
+Replaces: bottom
+Description: customizable graphical process/system monitor for the terminal
+ bottom (executable name btm) is a customizable graphical process/system
+ monitor for the terminal, inspired by gtop, gotop and htop.
+ .
+ By default, bottom is somewhat like a dashboard: a bunch of different
+ widgets, all showing different things, and they all cram together to fit
+ into one terminal.

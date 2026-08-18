@@ -1,0 +1,89 @@
+name: Build bottom for Debian
+
+on:
+  workflow_dispatch:
+    inputs:
+      bottom_version:
+        description: The version of bottom to build.
+        type: string
+        required: true
+      build_version:
+        description: The build version.
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-bottom:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bottom-debian
+        uses: actions/checkout@v4
+
+      - name: Validate upstream license permits paid distribution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./validate_license.sh ${{ inputs.bottom_version }}
+
+      - name: Build bottom
+        run: ./build.sh ${{ inputs.bottom_version }} ${{ inputs.build_version }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact
+          path: btm_*.deb
+
+  build-src:
+    name: Build Source Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bottom-debian
+        uses: actions/checkout@v4
+
+      - name: Install dpkg-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg-dev devscripts wget ca-certificates
+
+      - name: Build source packages
+        run: ./build_src.sh ${{ inputs.bottom_version }} ${{ inputs.build_version }}
+
+      - name: Upload Source Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-artifact
+          path: |
+            btm_*.dsc
+            btm_*.orig.tar.gz
+            btm_*.debian.tar.xz
+
+  release-bottom:
+    name: Release bottom for Debian
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [build-bottom, build-src]
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifact
+
+      - name: Download Source Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: source-artifact
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          files: |
+            btm_*.deb
+            btm_*.dsc
+            btm_*.orig.tar.gz
+            btm_*.debian.tar.xz
+          name: ${{ inputs.bottom_version }}+${{ inputs.build_version }}
+          tag_name: ${{ inputs.bottom_version }}+${{ inputs.build_version }}
+          fail_on_unmatched_files: true

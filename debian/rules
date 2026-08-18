@@ -1,0 +1,57 @@
+#!/usr/bin/make -f
+DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+BOTTOM_VERSION := $(shell dpkg-parsechangelog -S Version | sed 's/[-~].*//')
+BASE_URL = https://github.com/ClementTsang/bottom/releases/download/$(BOTTOM_VERSION)
+RAW_URL = https://raw.githubusercontent.com/ClementTsang/bottom/$(BOTTOM_VERSION)
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+
+override_dh_auto_build:
+	@arch="$(DEB_HOST_ARCH)"; \
+	case "$$arch" in \
+		amd64)   BOTTOM_ASSET="bottom_x86_64-unknown-linux-musl" ;; \
+		arm64)   BOTTOM_ASSET="bottom_aarch64-unknown-linux-musl" ;; \
+		armhf)   BOTTOM_ASSET="bottom_armv7-unknown-linux-musleabihf" ;; \
+		i386)    BOTTOM_ASSET="bottom_i686-unknown-linux-musl" ;; \
+		riscv64) BOTTOM_ASSET="bottom_riscv64gc-unknown-linux-gnu" ;; \
+		*) echo "Unsupported architecture: $$arch"; exit 1 ;; \
+	esac; \
+	BOTTOM_RELEASE="btm-$(BOTTOM_VERSION)-$$arch"; \
+	echo "Downloading $$BOTTOM_ASSET for $(BOTTOM_VERSION)..."; \
+	wget -q "$(BASE_URL)/$$BOTTOM_ASSET.tar.gz"; \
+	mkdir -p "$$BOTTOM_RELEASE"; \
+	tar -xf "$$BOTTOM_ASSET.tar.gz" -C "$$BOTTOM_RELEASE"; \
+	rm -f "$$BOTTOM_ASSET.tar.gz"; \
+	mkdir -p "$$BOTTOM_RELEASE/manpage" "$$BOTTOM_RELEASE/desktop" "$$BOTTOM_RELEASE/icons"; \
+	wget -q -O manpage.tar.gz "$(BASE_URL)/manpage.tar.gz"; \
+	tar -xf manpage.tar.gz -C "$$BOTTOM_RELEASE/manpage"; \
+	rm -f manpage.tar.gz; \
+	gunzip -f "$$BOTTOM_RELEASE/manpage/btm.1.gz"; \
+	wget -q -O "$$BOTTOM_RELEASE/desktop/bottom.desktop" "$(BASE_URL)/bottom.desktop"; \
+	wget -q -O "$$BOTTOM_RELEASE/icons/bottom-system-monitor.svg" "$(RAW_URL)/assets/icons/bottom-system-monitor.svg"; \
+	echo "$$BOTTOM_RELEASE" > .bottom_release_name
+
+override_dh_auto_install:
+	@BOTTOM_RELEASE=$$(cat .bottom_release_name); \
+	install -D -m 755 "$$BOTTOM_RELEASE/btm" debian/btm/usr/bin/btm; \
+	install -D -m 644 "$$BOTTOM_RELEASE/manpage/btm.1" debian/btm/usr/share/man/man1/btm.1; \
+	install -D -m 644 "$$BOTTOM_RELEASE/completion/btm.bash" debian/btm/usr/share/bash-completion/completions/btm; \
+	install -D -m 644 "$$BOTTOM_RELEASE/completion/btm.fish" debian/btm/usr/share/fish/vendor_completions.d/btm.fish; \
+	install -D -m 644 "$$BOTTOM_RELEASE/completion/_btm" debian/btm/usr/share/zsh/vendor-completions/_btm; \
+	install -D -m 644 "$$BOTTOM_RELEASE/desktop/bottom.desktop" debian/btm/usr/share/applications/bottom.desktop; \
+	install -D -m 644 "$$BOTTOM_RELEASE/icons/bottom-system-monitor.svg" debian/btm/usr/share/icons/hicolor/scalable/apps/bottom-system-monitor.svg
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+	@if [ -f .bottom_release_name ]; then \
+		BOTTOM_RELEASE=$$(cat .bottom_release_name); \
+		rm -rf "$$BOTTOM_RELEASE" .bottom_release_name || true; \
+	fi
+
+override_dh_strip:
+
+override_dh_shlibdeps:

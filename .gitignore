@@ -1,0 +1,13 @@
+# .deb Packages
+*.deb
+
+# Source packages and downloaded upstream tarballs
+*.dsc
+*.tar.gz
+*.tar.xz
+
+# Extracted upstream releases
+btm-*/
+
+.idea/*
+.DS_Store
