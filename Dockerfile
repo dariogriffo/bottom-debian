@@ -38,6 +38,8 @@ RUN sed -i "s/bottom_VERSION/$bottom_VERSION/" /output/DEBIAN/control
 RUN sed -i "s/BUILD_VERSION/$BUILD_VERSION/" /output/DEBIAN/control
 RUN sed -i "s/SUPPORTED_ARCHITECTURES/$ARCH/" /output/DEBIAN/control
 RUN sed -i "s|DEPENDS|$DEPENDS|" /output/DEBIAN/control
+# Static builds have no dependencies: drop the field rather than ship it empty
+RUN sed -i '/^Depends:[[:space:]]*$/d' /output/DEBIAN/control
 
 RUN find /output/usr/share -type f -exec chmod 644 {} +
 
